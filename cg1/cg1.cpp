@@ -293,61 +293,39 @@ void Display3() {
   drawSquare(t, distance);
   fractalSquare(t, distance, g_recursionCurrent);
 }
-//ceva nu merge
-void fractalHexline(Turtle t, float distance, int recursionsLeft, int angle = 0){
+
+Turtle fractalHexline(Turtle t, float distance, int recursionsLeft, double angle){
   if(recursionsLeft > 0){
     --recursionsLeft;
-    distance = distance/2;
+    distance = distance / 2;
 
-    if(angle == 0){
-      t.rotate(pi/3);
-      fractalHexline(t, distance, recursionsLeft, 60);
-      t.move(distance);
-
-      t.rotate(-pi/3);
-      fractalHexline(t, distance, recursionsLeft, 0);
-      t.move(distance);
-
-      t.rotate(-pi/3);
-      fractalHexline(t, distance, recursionsLeft, -60);
-
-    } else if(angle == 60) {
-      t.rotate(-pi/3);
-      fractalHexline(t, distance, recursionsLeft, 0);
-      t.move(distance);
-
-      t.rotate(pi/3);
-      fractalHexline(t, distance, recursionsLeft, 60);
-      t.move(distance);
-
-      t.rotate(pi/3);
-      fractalHexline(t, distance, recursionsLeft, -60);
-      
-    } else {
-      t.rotate(-pi/3);
-      fractalHexline(t, distance, recursionsLeft, 60);
-      t.move(distance);
-
-      t.rotate(pi/3);
-      fractalHexline(t, distance, recursionsLeft, -60);
-      t.move(distance);
-
-      t.rotate(pi/3);
-      fractalHexline(t, distance, recursionsLeft, 0);
-      
-    }
-
+    t = fractalHexline(t, distance, recursionsLeft, -angle);
+    t.rotate(angle);
+    t = fractalHexline(t, distance, recursionsLeft, angle);
+    t.rotate(angle);
+    t = fractalHexline(t, distance, recursionsLeft, -angle);
   } else {
     t.draw(distance);
   }
+  return t;
 }
 
 void Display4() {
   glColor3f(1, 0, 0);
   drawRecursionLevel();
-  Turtle t(-0.95, -0.95);
   float distance = 1.9;
-  fractalHexline(t, distance, g_recursionCurrent);
+  
+  Turtle t;
+
+  if(g_recursionCurrent % 2 ==0){
+    Turtle t(-0.95, -0.95);  
+    fractalHexline(t, distance, g_recursionCurrent, -pi/3);
+  } else {
+    Turtle t(0.95, -0.95);
+    t.rotate(2*pi/3);
+    fractalHexline(t, distance, g_recursionCurrent, pi/3);
+  }
+
 }
 
 template <typename FloatType>
@@ -373,7 +351,7 @@ protected:
     for(int ii = maxIteration; ii > 0; --ii) {
       z = z * z + c;
       if(abs(z) > maxRadius)
-	return(ii);
+	      return(ii);
     }
     return 0;
   }
