@@ -15,6 +15,8 @@ double pi = halfCircle; // TAU / 2 = PI
 
 int g_w = 1000, g_h = 1000;
 
+float g_animation = 0; //animation constant
+
 unsigned char g_prevKey;
 
 int g_recursionMax = 8, g_recursionCurrent = 2;
@@ -357,7 +359,7 @@ protected:
   }
   
 public:
-  JF(FloatType xmin, FloatType xmax, FloatType ymin, FloatType ymax, FloatType a = 0, FloatType b = 0, FloatType maxRadius = 20, int maxIteration = 150):
+  JF(FloatType xmin, FloatType xmax, FloatType ymin, FloatType ymax, FloatType a = 0, FloatType b = 0, FloatType maxRadius = 100, int maxIteration = 500):
     m_xmin(xmin),
     m_xmax(xmax),
     m_ymin(ymin),
@@ -391,8 +393,16 @@ public:
         iterations = test(z, m_c, m_maxRadius, m_maxIteration);
 
         if(0 == iterations) {
-          glColor3f(1, 0, 0);
+          glColor3f(1, 1, 1);
           glVertex2d(h, v);	  
+        } else {
+          double value = 15 * log((double) iterations + 1.0);
+          value -= floor(value);
+          float r = 0.5f + 0.5f * sin(2*pi * (value + 0.5));
+          float g = 0.5f + 0.5f * sin(2*pi * (value + 0.2));
+          float b = 0.7f + 0.5f * sin(2*pi * (value + 0.1));
+          glColor3f(r, g, b);
+          glVertex2d(h, v);
         }
       }
     }
@@ -420,14 +430,14 @@ protected:
   //The x and y mathematical bounds of the fractal slice we're displaying.
   FloatType m_xmin, m_xmax, m_ymin, m_ymax;
   //The constant we're biasing the MB fractal with.
-  std::complex<FloatType> z;
+  std::complex<FloatType> m_z;
   //The radius around the origin we're using to detect divergence.
   FloatType m_maxRadius;
   //How many iterations we'll do to allow the number sequence to
   //exceed the limit.
   int m_maxIteration;
 
-  virtual inline int test(std::complex<FloatType> z, std::complex<FloatType> c, double maxRadius = 2, int maxIteration = 50) {
+  virtual inline int test(std::complex<FloatType> z, std::complex<FloatType> c, double maxRadius = 50, int maxIteration = 150) {
     //We create a number sequence, and estimate its limit.
     for(int ii = maxIteration; ii > 0; --ii) {
       z = z * z + c;
@@ -438,15 +448,15 @@ protected:
   }
   
 public:
-  MB(FloatType xmin, FloatType xmax, FloatType ymin, FloatType ymax, FloatType maxRadius = 20, int maxIteration = 150):
+  MB(FloatType xmin, FloatType xmax, FloatType ymin, FloatType ymax, FloatType maxRadius = 100, int maxIteration = 400):
     m_xmin(xmin),
     m_xmax(xmax),
     m_ymin(ymin),
     m_ymax(ymax),
     m_maxRadius(maxRadius),
     m_maxIteration(maxIteration) {
-      z.imag(0);
-      z.real(0);
+      m_z.imag(0);
+      m_z.real(0);
   }
 
   void draw(FloatType l, FloatType r, FloatType b, FloatType t, int samplePointsHorizontal, int samplePointsVertical) {
@@ -470,11 +480,19 @@ public:
       c.imag(y);
       for(FloatType ii = 0, x = m_xmin, h = l; ii < samplePointsHorizontal; ii += 1, x += stepx, h += steph) {
         c.real(x);
-        iterations = test(z, c, m_maxRadius, m_maxIteration);
+        iterations = test(m_z, c, m_maxRadius, m_maxIteration);
 
         if(0 == iterations) {
-          glColor3f(1, 0, 0);
+          glColor3f(1, 1, 1);
           glVertex2d(h, v);	  
+        } else {
+          double value = 30 * log((double) iterations + 1.0);
+          value -= floor(value);
+          float r = 0.5 + 0.5 * sin(2*pi * (value) + g_animation);
+          float g = 0.5 + 0.5 * sin(2*pi * (value + 0.9 + g_animation));
+          float b = 0.7 + 0.5 * sin(2*pi * (value + 0.4 + g_animation));
+          glColor3f(r, g, b);
+          glVertex2d(h, v);
         }
       }
     }
@@ -483,7 +501,6 @@ public:
 };
 
 void Display6() {
-  //Draw the Mandelbrot fractal here.
   float drawSize = 1.0;
   MB<double> mb(-2, 2, -2, 2);
   /*
@@ -492,18 +509,6 @@ void Display6() {
     More on this in the Shaders homework and lecture.
   */
   mb.draw(-drawSize, drawSize, -drawSize, drawSize, g_w + 1, g_h + 1);
-}
-
-void Display7() {
-}
-
-void Display8() {
-}
-
-void Display9() {
-}
-
-void Display10() {
 }
 
 void init(void) {
@@ -528,6 +533,14 @@ void init(void) {
 
 }
 
+void AnimateMB(){
+  float animationSpeed = 0.03;
+  g_animation += animationSpeed;
+  if(g_animation > 2*pi)
+    g_animation -= 2*pi;
+  glutPostRedisplay();
+}
+
 void Display(void) {
   // Clear the buffer. See init();
   glClear(GL_COLOR_BUFFER_BIT);
@@ -550,18 +563,7 @@ void Display(void) {
     break;
   case '6':
     Display6();
-    break;
-  case '7':
-    Display7();
-    break;
-  case '8':
-    Display8();
-    break;
-  case '9':
-    Display9();
-    break;
-  case '0':
-    Display10();
+    glutIdleFunc(AnimateMB);
     break;
   default:
     break;
@@ -631,7 +633,6 @@ void KeyboardFunc(unsigned char key, int x, int y) {
 void biasJF(int x, int y){
   g_jfa = float(x-500) / g_w; 
   g_jfb = float(y-500) / g_h;
-  // Display4();
   glutPostRedisplay();
 }
 
@@ -659,7 +660,6 @@ int main(int argc, char** argv) {
   glutKeyboardFunc(KeyboardFunc);
   glutMouseFunc(MouseFunc);
   glutDisplayFunc(Display);
-  //glutIdleFunc(Display);
   glutMainLoop();
 
   return 0;
