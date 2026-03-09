@@ -18,7 +18,7 @@ int g_w = 1000, g_h = 1000;
 unsigned char g_prevKey;
 
 int g_recursionMax = 8, g_recursionCurrent = 2;
-double g_jfa = -0.82, g_jfb = -0.17; //Julia-Fatou a and b values.
+double g_jfa = -0.50, g_jfb = -0.50; //Julia-Fatou a and b values.
 
 //----------------Utility functions----------------------
 
@@ -387,13 +387,13 @@ public:
     for(FloatType jj = 0, y = m_ymin, v = b; jj < samplePointsVertical; jj += 1, y += stepy, v += stepv) {
       z.imag(y);
       for(FloatType ii = 0, x = m_xmin, h = l; ii < samplePointsHorizontal; ii += 1, x += stepx, h += steph) {
-	z.real(x);
-	iterations = test(z, m_c, m_maxRadius, m_maxIteration);
+        z.real(x);
+        iterations = test(z, m_c, m_maxRadius, m_maxIteration);
 
-  if(0 == iterations) {
-	  glColor3f(1, 0, 0);
-	  glVertex2d(h, v);	  
-	}
+        if(0 == iterations) {
+          glColor3f(1, 0, 0);
+          glVertex2d(h, v);	  
+        }
       }
     }
     glEnd();
@@ -411,10 +411,75 @@ void Display5() {
 
 //Modify what you think necessary in the MB class to draw the Mandelbrot Fractal.
 template <typename FloatType>
-class MB: public JF<FloatType> {
+class MB {
+// public:
+//   MB(FloatType xmin, FloatType xmax, FloatType ymin, FloatType ymax, FloatType a = 0, FloatType b = 0, FloatType maxRadius = 20, int maxIteration = 150):
+//     JF<FloatType>(xmin, xmax, ymin, ymax, a, b, maxRadius, maxIteration) {}
+
+protected:
+  //The x and y mathematical bounds of the fractal slice we're displaying.
+  FloatType m_xmin, m_xmax, m_ymin, m_ymax;
+  //The constant we're biasing the MB fractal with.
+  std::complex<FloatType> z;
+  //The radius around the origin we're using to detect divergence.
+  FloatType m_maxRadius;
+  //How many iterations we'll do to allow the number sequence to
+  //exceed the limit.
+  int m_maxIteration;
+
+  virtual inline int test(std::complex<FloatType> z, std::complex<FloatType> c, double maxRadius = 2, int maxIteration = 50) {
+    //We create a number sequence, and estimate its limit.
+    for(int ii = maxIteration; ii > 0; --ii) {
+      z = z * z + c;
+      if(abs(z) > maxRadius)
+	      return(ii);
+    }
+    return 0;
+  }
+  
 public:
-  MB(FloatType xmin, FloatType xmax, FloatType ymin, FloatType ymax, FloatType a = 0, FloatType b = 0, FloatType maxRadius = 20, int maxIteration = 150):
-    JF<FloatType>(xmin, xmax, ymin, ymax, a, b, maxRadius, maxIteration) {}
+  MB(FloatType xmin, FloatType xmax, FloatType ymin, FloatType ymax, FloatType maxRadius = 20, int maxIteration = 150):
+    m_xmin(xmin),
+    m_xmax(xmax),
+    m_ymin(ymin),
+    m_ymax(ymax),
+    m_maxRadius(maxRadius),
+    m_maxIteration(maxIteration) {
+      z.imag(0);
+      z.real(0);
+  }
+
+  void draw(FloatType l, FloatType r, FloatType b, FloatType t, int samplePointsHorizontal, int samplePointsVertical) {
+    /*
+      Draw the current slice of the JF set onto the screen.
+      Left, right, bottom, top, and the steps for each axis.
+    */
+    glPointSize(1);
+    FloatType stepx = (m_xmax - m_xmin) / FloatType(samplePointsHorizontal);
+    FloatType stepy = (m_ymax - m_ymin) / FloatType(samplePointsVertical);
+    FloatType steph = (r      - l)      / FloatType(samplePointsHorizontal);
+    FloatType stepv = (t      - b)      / FloatType(samplePointsVertical);
+    int iterations;
+    std::complex<FloatType> c;
+    glBegin(GL_POINTS);
+    /*
+      We need to move both on screen pixels and in the mathematical plane -
+      at the same time.
+    */
+    for(FloatType jj = 0, y = m_ymin, v = b; jj < samplePointsVertical; jj += 1, y += stepy, v += stepv) {
+      c.imag(y);
+      for(FloatType ii = 0, x = m_xmin, h = l; ii < samplePointsHorizontal; ii += 1, x += stepx, h += steph) {
+        c.real(x);
+        iterations = test(z, c, m_maxRadius, m_maxIteration);
+
+        if(0 == iterations) {
+          glColor3f(1, 0, 0);
+          glVertex2d(h, v);	  
+        }
+      }
+    }
+    glEnd();
+  }
 };
 
 void Display6() {
@@ -562,11 +627,25 @@ void KeyboardFunc(unsigned char key, int x, int y) {
   a pressed or released button.
   (x, y) are the coordinates of the mouse.
 */
+
+void biasJF(int x, int y){
+  g_jfa = float(x-500) / g_w; 
+  g_jfb = float(y-500) / g_h;
+  // Display4();
+  glutPostRedisplay();
+}
+
+void LeftButtonPressed(int x, int y){
+  biasJF(x, y);
+}
+
 void MouseFunc(int button, int state, int x, int y) {
   std::cout<< "Mouse button ";
   std::cout<<( (button == GLUT_LEFT_BUTTON) ? "left" : ((button == GLUT_RIGHT_BUTTON) ? "right": "middle") ) << " ";
   std::cout<< ( (state == GLUT_DOWN) ? "pressed" : "released" );
   std::cout<< " at coordinates: " << x <<" x " << y << std::endl;
+  if(state == GLUT_DOWN && button == GLUT_LEFT_BUTTON)
+    glutMotionFunc(LeftButtonPressed);
 }
 
 int main(int argc, char** argv) {
